@@ -8,35 +8,36 @@ var jade = require('../'),
     Compiler = jade.Compiler,
     nodes = jade.nodes;
 
-var options = {
-    compiler: CSRF
-  , locals: {
-    csrf: 'WAHOOOOOO'
-  }
-};
-
-jade.renderFile(__dirname + '/csrf.jade', options, function(err, html){
-    if (err) throw err;
-    console.log(html);
-});
-
-function CSRF(node, options) {
+var CSRF = function CSRF(node, options) {
   Compiler.call(this, node, options);
 }
 
-CSRF.prototype.__proto__ = Compiler.prototype;
+CSRF.prototype = Object.create(Compiler.prototype);
 
 CSRF.prototype.visitTag = function(node){
   var parent = Compiler.prototype.visitTag;
-  switch (node.name) {
-    case 'form':
-      if ("'post'" == node.getAttribute('method')) {
+  if (node.name === 'form') {
+    for (var i = 0; i < node.attrs.length; i++) {
+      var attr = node.attrs[i];
+      if (attr && attr.name === 'method' && attr.val === "'post'") {
         var tok = new nodes.Tag('input');
-        tok.setAttribute('type', '"hidden"');
-        tok.setAttribute('name', '"csrf"');
-        tok.setAttribute('value', 'csrf');
+        tok.setAttribute('type', '"hidden"', true);
+        tok.setAttribute('name', '"csrf"', true);
+        tok.setAttribute('value', 'csrf', false);
         node.block.unshift(tok);
       }
+    }
   }
   parent.call(this, node);
 };
+
+var options = {
+  compiler: CSRF
+, client: true
+}
+var locals = {
+  csrf: 'WAHOOOOOO'
+};
+
+var fn = jade.compileFile(__dirname + '/csrf.jade', options);
+console.log(fn(locals));
